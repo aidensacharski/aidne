@@ -38,22 +38,20 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/":
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(b"""
-                <html>
-                <head><title>Proxy Home</title></head>
-                <body>
-                    <h1>Welcome to the HTTP Proxy</h1>
-                    <p>This proxy requires basic authentication to access web content.</p>
-                </body>
-                </html>
-            ")
-            return
-
-        if not self.authenticate():
-            return
+    self.send_response(200)
+    self.send_header("Content-type", "text/html")
+    self.end_headers()
+    html = """
+        <html>
+        <head><title>Proxy Home</title></head>
+        <body>
+            <h1>Welcome to the HTTP Proxy</h1>
+            <p>This proxy requires basic authentication to access web content.</p>
+        </body>
+        </html>
+    """
+    self.wfile.write(html.encode("utf-8"))
+    return
 
         parsed_url = urlparse(self.path)
         if not parsed_url.scheme:
