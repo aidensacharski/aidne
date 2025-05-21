@@ -41,7 +41,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(b"""
+           self.send_error(400, "Bad Request: URL must include scheme (http://)")
                 <html>
                 <head><title>Proxy Home</title></head>
                 <body>
@@ -92,3 +92,7 @@ if __name__ == '__main__':
         print("\nProxy server shutting down.")
     except Exception as e:
         print(f"Failed to start server: {e}")
+if __name__ == '__main__':
+    server = ThreadingSimpleServer(("0.0.0.0", PORT), ProxyHandler)
+    print(f"HTTP proxy server running on port {PORT}")
+    server.serve_forever()
