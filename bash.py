@@ -2,4 +2,6 @@ git init
 git add .
 git commit -m "Initial commit"
 
-gh repo create my-proxy-app --public --source=. --remote=origin --push
+git remote add origin https://github.com/aidensacharski/aidene.git
+git branch -M main
+git push -u origin main
