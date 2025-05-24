@@ -1,95 +1,91 @@
-import http.server
-import socketserver
-import base64
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.request
-import urllib.error
-from urllib.parse import urlparse
+import base64
 import os
-import threading
 
-PORT = int(os.environ.get("PORT", 8080))
-USERNAME = os.environ.get("PROXY_USERNAME", "admin")
-PASSWORD = os.environ.get("PROXY_PASSWORD", "password")
+USERNAME = os.getenv("USERNAME", "admin")
+PASSWORD = os.getenv("PASSWORD", "password")
+CREDENTIALS = base64.b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode()
 
-class ProxyHandler(http.server.BaseHTTPRequestHandler):
-
-    def authenticate(self):
-        auth_header = self.headers.get("Proxy-Authorization")
-        if auth_header is None or not auth_header.startswith("Basic "):
-            self.send_response(407)
-            self.send_header("Proxy-Authenticate", "Basic realm=\"Proxy\"")
-            self.end_headers()
-            return False
-
-        try:
-            encoded = auth_header.split(" ", 1)[1].strip()
-            decoded = base64.b64decode(encoded).decode()
-            username, password = decoded.split(":", 1)
-            if username != USERNAME or password != PASSWORD:
-                self.send_response(403)
-                self.end_headers()
-                return False
-        except Exception:
-            self.send_response(400, "Bad Request: Invalid Authentication Header")
-            self.end_headers()
-            return False
-
-        return True
-
+class ProxyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # Authentication
+        auth_header = self.headers.get("Authorization")
+        if auth_header != f"Basic {CREDENTIALS}":
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="Proxy"')
+            self.end_headers()
+            return
+
+        # Homepage with search bar
         if self.path == "/":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             html = """
                 <html>
-                <head><title>Proxy Home</title></head>
-                <body>
-                    <h1>Welcome to the HTTP Proxy</h1>
-                    <p>This proxy requires basic authentication to access web content.</p>
-                </body>
+                    <head><title>Proxy Search</title></head>
+                    <body>
+                        <h1>Welcome to the HTTP Proxy</h1>
+                        <form method="get" action="/search">
+                            <input type="text" name="q" placeholder="https://example.com" size="50"/>
+                            <input type="submit" value="Go"/>
+                        </form>
+                        <p>This proxy requires basic authentication to access web content.</p>
+                    </body>
                 </html>
             """
             self.wfile.write(html.encode("utf-8"))
             return
 
-        if not self.authenticate():
-            return
+        # Handle search query
+        if self.path.startswith("/search"):
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            query = parse_qs(parsed.query).get("q", [""])[0]
 
-        parsed_url = urlparse(self.path)
-        if not parsed_url.scheme:
-            self.send_error(400, "Bad Request: URL must include scheme (http://)")
-            return
-
-        try:
-            req_headers = {k: v for k, v in self.headers.items() if k.lower() != 'proxy-authorization'}
-            req = urllib.request.Request(self.path, headers=req_headers)
-            with urllib.request.urlopen(req) as response:
-                self.send_response(response.status)
-                for header, value in response.getheaders():
-                    self.send_header(header, value)
+            if not query.startswith("http"):
+                self.send_response(400)
                 self.end_headers()
-                self.wfile.write(response.read())
+                self.wfile.write(b"Invalid URL")
+                return
 
-        except urllib.error.HTTPError as e:
-            self.send_error(e.code, e.reason)
-        except urllib.error.URLError as e:
-            self.send_error(502, f"Bad Gateway: {e.reason}")
-        except Exception as e:
-            self.send_error(500, f"Internal Server Error: {str(e)}")
+            try:
+                with urllib.request.urlopen(query) as response:
+                    content = response.read()
+                    self.send_response(200)
+                    self.send_header("Content-type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(content)
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f"Proxy error: {e}".encode("utf-8"))
+            return
 
-    def log_message(self, format, *args):
-        pass
+        # Default: proxy raw URL from /http://... or /https://...
+        if self.path.startswith("/http"):
+            url = self.path[1:]  # strip the leading slash
+            try:
+                with urllib.request.urlopen(url) as response:
+                    content = response.read()
+                    self.send_response(200)
+                    self.send_header("Content-type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(content)
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f"Proxy error: {e}".encode("utf-8"))
+            return
 
-class ThreadingSimpleServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    daemon_threads = True
+        # Otherwise
+        self.send_response(404)
+        self.end_headers()
 
-if __name__ == '__main__':
-    try:
-        server = ThreadingSimpleServer(("0.0.0.0", PORT), ProxyHandler)
-        print(f"HTTP proxy server running on port {PORT}")
-        threading.Thread(target=server.serve_forever).start()
-    except KeyboardInterrupt:
-        print("\nProxy server shutting down.")
-    except Exception as e:
-        print(f"Failed to start server: {e}")
+# Run server
+if __name__ == "__main__":
+    server_address = ('', 8080)
+    httpd = HTTPServer(server_address, ProxyHandler)
+    print("Proxy running on http://localhost:8080")
+    httpd.serve_forever()
