@@ -1,8 +1,45 @@
-<html>
-    <main>
-<form action="/search" method="get">
-    <input name="q" placeholder="Search...">
-    <button type="submit">Search</button>
-   </form>
-   </main>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sacharski Proxy</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #0f1117;
+      color: #f1f1f1;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin: 0 auto 2rem;
+      max-width: 600px;
+      line-height: 1.5;
+    }
+    .search-box {
+      margin-top: 1rem;
+    }
+    input {
+      padding: 0.5rem;
+      width: 80%;
+      max-width: 400px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Sacharski Proxy</h1>
+  <p>Use the search bar below to access blocked sites safely and anonymously.</p>
+  <div class="search-box">
+    <input type="text" placeholder="Enter URL or search query..." />
+  </div>
+</body>
 </html>
