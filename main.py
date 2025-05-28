@@ -1,3 +1,5 @@
+npm install && node server.js
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.request
 import base64
