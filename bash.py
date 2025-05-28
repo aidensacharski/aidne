@@ -8,4 +8,4 @@ git push -u origin main
 
 pip install requests
 
-
+npm install && node server.js
