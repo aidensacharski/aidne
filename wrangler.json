@@ -1,0 +1,9 @@
+{
+  "name": "your-worker-name",
+  "compatibility_date": "2025-05-28",
+  "assets": {
+    "directory": "./public"
+  }
+}
+
+npx wrangler deploy
